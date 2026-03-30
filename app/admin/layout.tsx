@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
-import { Home, LogOut, LayoutDashboard, UtensilsCrossed, Grid3X3, Users, BarChart3, Volume2, VolumeX, Bell, CreditCard, Settings, Bike } from 'lucide-react';
+import { Home, LogOut, LayoutDashboard, UtensilsCrossed, Grid3X3, Users, BarChart3, Volume2, VolumeX, Bell, CreditCard, Settings, Bike, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUnreadNotifications, useMarkAllNotificationsRead } from '@/hooks/use-restaurant-data';
 import { playNotificationSound } from '@/lib/notification-sounds';
@@ -23,6 +23,7 @@ const navItems = [
   { href: '/admin/tables', label: 'Tables', icon: Grid3X3 },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/messaging', label: 'Messaging', icon: MessageSquare },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/drivers', label: 'Drivers', icon: Bike },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
