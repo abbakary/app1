@@ -234,7 +234,8 @@ export default function CustomerMenuPage() {
       const tax = calculateTax();
       const total = subtotal + tax;
 
-      const res = await fetch(`${BASE_URL}/api/orders`, {
+      // Step 1: Create order
+      const orderRes = await fetch(`${BASE_URL}/api/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -245,7 +246,7 @@ export default function CustomerMenuPage() {
           table_id: orderType === 'dine-in' ? tableId : null,
           table_name: orderType === 'dine-in' ? tables.find(t => t.id === tableId)?.name : null,
           customer_count: orderType === 'dine-in' ? 1 : null,
-          status: 'pending', // Initial order status
+          status: 'pending',
           order_type: orderType,
           delivery_address: orderType === 'delivery' ? deliveryAddress : null,
           customer_phone: customerPhone || null,
@@ -261,13 +262,35 @@ export default function CustomerMenuPage() {
         }),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
+      if (!orderRes.ok) {
+        const error = await orderRes.json();
         const errorMsg = Array.isArray(error.detail)
           ? error.detail.map((e: any) => `${e.loc.join('.')}: ${e.msg}`).join(', ')
           : (error.detail || 'Failed to place order');
         toast.error(errorMsg);
         return;
+      }
+
+      const orderData = await orderRes.json();
+
+      // Step 2: Create payment record to update order status to paid (for development/mock flow)
+      try {
+        await fetch(`${BASE_URL}/api/payments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Restaurant-ID': restaurantId || '',
+          },
+          body: JSON.stringify({
+            order_id: orderData.id,
+            amount: total,
+            method: 'card',
+            status: 'completed',
+          }),
+        });
+      } catch (paymentErr) {
+        console.error('Payment record creation failed, but order was created:', paymentErr);
+        // Order was created successfully, payment logging failed but we continue
       }
 
       toast.success('Order placed successfully! 🎉', {
