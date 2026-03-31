@@ -232,6 +232,7 @@ async def send_bulk_messages(
                     target=request.target,
                     phone_number=customer.phone,
                     status="sent",  # In production, integrate with actual SMS/WhatsApp service
+                    created_at=datetime.utcnow(),
                     sent_at=datetime.utcnow()
                 )
                 db.add(message)

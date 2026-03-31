@@ -1,67 +1,67 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, JSON, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 
 class Restaurant(Base):
     __tablename__ = "restaurants"
-    id = Column(String, primary_key=True, index=True)
-    name = Column(String)
-    email = Column(String, nullable=True)  # Restaurant contact email
-    phone = Column(String, nullable=True)  # Restaurant contact phone
-    address = Column(String, nullable=True)
-    airpay_account_id = Column(String, nullable=True)  # Airpay sub-account ID
-    payment_status = Column(String, default="pending")  # 'pending', 'active', 'failed'
-    customer_portal_url = Column(String, nullable=True, unique=True, index=True)  # e.g., 'restaurant-name-unique'
-    logo_url = Column(String, nullable=True)  # URL to restaurant logo
+    id = Column(String(36), primary_key=True, index=True)  # For UUID
+    name = Column(String(255))
+    email = Column(String(255), nullable=True)  # Restaurant contact email
+    phone = Column(String(20), nullable=True)  # Restaurant contact phone
+    address = Column(String(500), nullable=True)
+    airpay_account_id = Column(String(100), nullable=True)  # Airpay sub-account ID
+    payment_status = Column(String(20), default="pending")  # 'pending', 'active', 'failed'
+    customer_portal_url = Column(String(255), nullable=True, unique=True, index=True)  # e.g., 'restaurant-name-unique'
+    logo_url = Column(String(500), nullable=True)  # URL to restaurant logo
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"), nullable=True) # Nullable for SysAdmins
-    name = Column(String, nullable=True)
-    username = Column(String, unique=True, index=True, nullable=True)
-    email = Column(String, unique=True, index=True, nullable=True)
-    role = Column(String) # 'sysadmin', 'admin', 'reception', 'kitchen', 'customer'
-    pin = Column(String, nullable=True)
-    hashed_password = Column(String)
-    phone = Column(String, nullable=True) # For customers
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"), nullable=True) # Nullable for SysAdmins
+    name = Column(String(255), nullable=True)
+    username = Column(String(100), unique=True, index=True, nullable=True)
+    email = Column(String(255), unique=True, index=True, nullable=True)
+    role = Column(String(50))  # 'sysadmin', 'admin', 'reception', 'kitchen', 'customer'
+    pin = Column(String(10), nullable=True)  # For PIN codes
+    hashed_password = Column(String(255))
+    phone = Column(String(20), nullable=True)  # For customers
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class RestaurantTable(Base):
     __tablename__ = "tables"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    name = Column(String)
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    name = Column(String(100))
     capacity = Column(Integer)
-    status = Column(String)
-    current_order_id = Column(String, nullable=True)
+    status = Column(String(20))
+    current_order_id = Column(String(36), nullable=True)
     position_row = Column(Integer)
     position_col = Column(Integer)
     seats = Column(Integer, default=4)
 
 class MenuItem(Base):
     __tablename__ = "menu_items"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    name = Column(String)
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    name = Column(String(255))
     price = Column(Float)
-    category = Column(String)
-    description = Column(String, nullable=True)
+    category = Column(String(100))
+    description = Column(String(500), nullable=True)
     available = Column(Boolean, default=True)
-    image_url = Column(String, nullable=True)
+    image_url = Column(String(500), nullable=True)
     tags = Column(JSON, nullable=True)
 
 class Driver(Base):
     __tablename__ = "drivers"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    name = Column(String)
-    phone = Column(String)
-    email = Column(String, nullable=True)
-    vehicle_type = Column(String)  # 'motorcycle', 'car', 'bicycle', etc.
-    vehicle_plate = Column(String, nullable=True)
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    name = Column(String(255))
+    phone = Column(String(20))
+    email = Column(String(255), nullable=True)
+    vehicle_type = Column(String(50))  # 'motorcycle', 'car', 'bicycle', etc.
+    vehicle_plate = Column(String(20), nullable=True)
     rating = Column(Float, default=5.0)
     is_available = Column(Boolean, default=True)
     latitude = Column(Float, nullable=True)  # Current location
@@ -73,23 +73,23 @@ class Driver(Base):
 
 class Order(Base):
     __tablename__ = "orders"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    customer_id = Column(String, ForeignKey("users.id"), nullable=True)  # For customer portal orders
-    driver_id = Column(String, ForeignKey("drivers.id"), nullable=True)  # Driver assigned to delivery order
-    table_id = Column(String, nullable=True)  # Nullable for delivery/pickup
-    table_name = Column(String, nullable=True)  # Nullable for delivery/pickup
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    customer_id = Column(String(36), ForeignKey("users.id"), nullable=True)  # For customer portal orders
+    driver_id = Column(String(36), ForeignKey("drivers.id"), nullable=True)  # Driver assigned to delivery order
+    table_id = Column(String(36), nullable=True)  # Nullable for delivery/pickup
+    table_name = Column(String(100), nullable=True)  # Nullable for delivery/pickup
     customer_count = Column(Integer, nullable=True)
-    order_type = Column(String, default="dine-in")  # 'dine-in', 'delivery', 'pickup'
-    delivery_address = Column(String, nullable=True)  # For delivery orders
-    customer_phone = Column(String, nullable=True)  # For delivery/pickup orders
-    approval_status = Column(String, default="pending")  # 'pending', 'approved', 'rejected'
-    approval_notes = Column(String, nullable=True)  # Reception notes on approval/rejection
-    status = Column(String) # 'pending', 'preparing', 'ready', 'paid', 'cancelled'
+    order_type = Column(String(20), default="dine-in")  # 'dine-in', 'delivery', 'pickup'
+    delivery_address = Column(String(500), nullable=True)  # For delivery orders
+    customer_phone = Column(String(20), nullable=True)  # For delivery/pickup orders
+    approval_status = Column(String(20), default="pending")  # 'pending', 'approved', 'rejected'
+    approval_notes = Column(String(500), nullable=True)  # Reception notes on approval/rejection
+    status = Column(String(20))  # 'pending', 'preparing', 'ready', 'paid', 'cancelled'
     subtotal = Column(Float, default=0.0)
     tax = Column(Float, default=0.0)
     total = Column(Float, default=0.0)
-    coupon_code = Column(String, nullable=True)  # Unique identity for customer pickup/delivery
+    coupon_code = Column(String(50), nullable=True)  # Unique identity for customer pickup/delivery
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     prepared_at = Column(DateTime, nullable=True)
@@ -105,61 +105,61 @@ class Order(Base):
 class OrderItem(Base):
     __tablename__ = "order_items"
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(String, ForeignKey("orders.id"))
-    menu_item_id = Column(String, ForeignKey("menu_items.id"))
+    order_id = Column(String(36), ForeignKey("orders.id"))
+    menu_item_id = Column(String(36), ForeignKey("menu_items.id"))
     quantity = Column(Integer)
-    notes = Column(String, nullable=True)
+    notes = Column(String(500), nullable=True)
     
     order = relationship("Order", back_populates="items")
     menu_item = relationship("MenuItem")
 
 class Payment(Base):
     __tablename__ = "payments"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    order_id = Column(String)
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    order_id = Column(String(36))
     amount = Column(Float)
     platform_fee = Column(Float, default=0.0)  # Platform commission (e.g., 10%)
     restaurant_amount = Column(Float, default=0.0)  # Amount for restaurant
-    method = Column(String)
-    status = Column(String)  # 'PENDING', 'SUCCESS', 'FAILED'
-    transaction_id = Column(String, nullable=True)  # Airpay transaction ID
-    airpay_transaction_id = Column(String, nullable=True)  # Airpay reference
-    webhook_processed = Column(String, nullable=True)  # Idempotency key
+    method = Column(String(50))
+    status = Column(String(20))  # 'PENDING', 'SUCCESS', 'FAILED'
+    transaction_id = Column(String(100), nullable=True)  # Airpay transaction ID
+    airpay_transaction_id = Column(String(100), nullable=True)  # Airpay reference
+    webhook_processed = Column(String(100), nullable=True)  # Idempotency key
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Notification(Base):
     __tablename__ = "notifications"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    title = Column(String)
-    message = Column(String)
-    type = Column(String)  # 'order', 'payment', 'system'
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    title = Column(String(255))
+    message = Column(Text)  # Changed to Text for longer messages
+    type = Column(String(20))  # 'order', 'payment', 'system'
     read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class RestaurantMessageTemplate(Base):
     __tablename__ = "restaurant_message_templates"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    template_name = Column(String)  # e.g., "Portal Sharing", "Welcome", "Promotion"
-    message_type = Column(String)  # 'sms', 'whatsapp'
-    content = Column(String)  # Template content with placeholders like {portal_url}
+    id = Column(String(36), primary_key=True, index=True)  # FIXED: Added length
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    template_name = Column(String(100))  # e.g., "Portal Sharing", "Welcome", "Promotion"
+    message_type = Column(String(20))  # 'sms', 'whatsapp'
+    content = Column(Text)  # Changed to Text for longer template content
     is_default = Column(Boolean, default=False)  # Set one as default per restaurant
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Message(Base):
     __tablename__ = "messages"
-    id = Column(String, primary_key=True, index=True)
-    restaurant_id = Column(String, ForeignKey("restaurants.id"))
-    customer_id = Column(String, ForeignKey("users.id"), nullable=True)  # Nullable for 'all' message
-    template_id = Column(String, ForeignKey("restaurant_message_templates.id"), nullable=True)
-    message_type = Column(String)  # 'sms', 'whatsapp'
-    content = Column(String)
-    target = Column(String)  # 'all', 'new' (customers who haven't received a message yet)
-    phone_number = Column(String)
-    status = Column(String, default="pending")  # 'pending', 'sent', 'failed'
+    id = Column(String(36), primary_key=True, index=True)
+    restaurant_id = Column(String(36), ForeignKey("restaurants.id"))
+    customer_id = Column(String(36), ForeignKey("users.id"), nullable=True)  # Nullable for 'all' message
+    template_id = Column(String(36), ForeignKey("restaurant_message_templates.id"), nullable=True)
+    message_type = Column(String(20))  # 'sms', 'whatsapp'
+    content = Column(Text)  # Changed to Text for longer messages
+    target = Column(String(20))  # 'all', 'new' (customers who haven't received a message yet)
+    phone_number = Column(String(20))
+    status = Column(String(20), default="pending")  # 'pending', 'sent', 'failed'
     created_at = Column(DateTime, default=datetime.utcnow)
     sent_at = Column(DateTime, nullable=True)
-    error_message = Column(String, nullable=True)
+    error_message = Column(String(500), nullable=True)

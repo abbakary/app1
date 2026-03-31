@@ -194,6 +194,21 @@ export function useCreatePayment() {
   });
 }
 
+export function useCompleteMockPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (paymentId: string) =>
+      api.post<Payment>(`/api/payments/complete-mock/${paymentId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tables });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    },
+  });
+}
+
 // ==================== NOTIFICATIONS ====================
 export function useNotifications() {
   return useQuery({

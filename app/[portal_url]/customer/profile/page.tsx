@@ -120,11 +120,11 @@ export default function CustomerProfilePage() {
              <div className="mt-8 grid grid-cols-2 gap-4">
                 <div className="flex flex-col items-center justify-center p-4 rounded-3xl bg-gray-50/50 dark:bg-gray-800/20 border border-gray-100 dark:border-gray-800">
                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Orders</span>
-                   <span className="text-lg font-black text-gray-900 dark:text-white">{customer.total_orders}</span>
+                   <span className="text-lg font-black text-gray-900 dark:text-white">{customer.total_orders || 0}</span>
                 </div>
                 <div className="flex flex-col items-center justify-center p-4 rounded-3xl bg-gray-50/50 dark:bg-gray-800/20 border border-gray-100 dark:border-gray-800">
                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rewards</span>
-                   <span className="text-lg font-black text-primary">{customer.rewards_points.toLocaleString()} PTS</span>
+                   <span className="text-lg font-black text-primary">{(customer.rewards_points || 0).toLocaleString()} PTS</span>
                 </div>
              </div>
           </CardContent>

@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -274,6 +275,9 @@ export default function DriversManagement() {
                         <DialogTitle>
                             {editingDriver ? 'Edit Driver' : 'Add New Driver'}
                         </DialogTitle>
+                        <DialogDescription>
+                            {editingDriver ? 'Update driver details and availability status' : 'Add a new delivery driver to your fleet'}
+                        </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
@@ -316,10 +320,10 @@ export default function DriversManagement() {
                                     value={formData.vehicle_type}
                                     onValueChange={(v) => setFormData({ ...formData, vehicle_type: v })}
                                 >
-                                    <SelectTrigger id="vehicle_type">
-                                        <SelectValue />
+                                    <SelectTrigger id="vehicle_type" className="cursor-pointer">
+                                        <SelectValue placeholder="Select vehicle type" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="z-[999]">
                                         {vehicleTypes.map((type) => {
                                             const Icon = type.icon;
                                             return (
@@ -346,27 +350,35 @@ export default function DriversManagement() {
                             </div>
                         </div>
 
-                        <div className="space-y-2 pt-2">
-                            <Label>Availability Status</Label>
-                            <div className="flex items-center gap-4">
+                        <div className="space-y-3 pt-2">
+                            <Label>Availability Status *</Label>
+                            <div className="flex items-center gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => setFormData({ ...formData, is_available: true })}
-                                    className={`flex-1 px-6 py-3 rounded-xl border-2 transition-all font-bold cursor-pointer active:scale-95 ${
-                                        formData.is_available
-                                            ? 'border-green-500 bg-green-50 text-green-600'
-                                            : 'border-gray-300 bg-white text-gray-500 hover:border-green-300 hover:bg-green-50/50'
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setFormData(prev => ({ ...prev, is_available: true }));
+                                    }}
+                                    className={`flex-1 px-4 py-3 rounded-lg border-2 font-semibold transition-all cursor-pointer ${
+                                        formData.is_available === true
+                                            ? 'border-green-500 bg-green-50 text-green-700'
+                                            : 'border-gray-200 bg-white text-gray-600 hover:border-green-300 hover:bg-gray-50'
                                     }`}
                                 >
                                     Available
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setFormData({ ...formData, is_available: false })}
-                                    className={`flex-1 px-6 py-3 rounded-xl border-2 transition-all font-bold cursor-pointer active:scale-95 ${
-                                        !formData.is_available
-                                            ? 'border-orange-500 bg-orange-50 text-orange-600'
-                                            : 'border-gray-300 bg-white text-gray-500 hover:border-orange-300 hover:bg-orange-50/50'
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setFormData(prev => ({ ...prev, is_available: false }));
+                                    }}
+                                    className={`flex-1 px-4 py-3 rounded-lg border-2 font-semibold transition-all cursor-pointer ${
+                                        formData.is_available === false
+                                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                            : 'border-gray-200 bg-white text-gray-600 hover:border-orange-300 hover:bg-gray-50'
                                     }`}
                                 >
                                     Busy / Offline

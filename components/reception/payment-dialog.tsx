@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Order, PaymentMethod } from '@/lib/types';
-import { useCreatePayment } from '@/hooks/use-restaurant-data';
+import { useCreatePayment, useCompleteMockPayment } from '@/hooks/use-restaurant-data';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,7 +28,9 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [showQR, setShowQR] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
   const createPayment = useCreatePayment();
+  const completeMockPayment = useCompleteMockPayment();
 
   const paymentMethods: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
     { value: 'cash', label: 'Cash', icon: Banknote },
@@ -36,6 +38,21 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
     { value: 'mobile', label: 'Mobile Money', icon: Smartphone },
     { value: 'qr', label: 'QR Code', icon: QrCode },
   ];
+
+  const fetchLatestOrder = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/orders/${order.id}`, {
+        headers: { 'X-Restaurant-ID': order.restaurantId || '' }
+      });
+      if (!res.ok) throw new Error('Failed to fetch latest order status');
+      const updatedOrder = await res.json();
+      setCompletedOrder(updatedOrder);
+      return updatedOrder;
+    } catch (err) {
+      console.error('fetchLatestOrder error:', err);
+      return null;
+    }
+  };
 
   const handlePayment = async () => {
     if (method === 'qr') {
@@ -45,15 +62,39 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
 
     try {
       // Create payment record which will update order status to paid
-      await createPayment.mutateAsync({
+      const payment = await createPayment.mutateAsync({
         orderId: order.id,
         amount: order.total,
         method,
       });
+
+      let finalOrder: Order | null = null;
+
+      // If it's a mock payment (for development), auto-complete it
+      if (payment.airpayTransactionId?.startsWith('mock_tx_')) {
+        console.log('Mock payment detected, completing...');
+        try {
+          const completedPayment = await completeMockPayment.mutateAsync(payment.id);
+          console.log('Payment completed:', completedPayment);
+          toast.success('Payment completed & Order status updated to paid (Mock)', {
+            description: `Order #${order.id.slice(-6)} is now marked as paid`
+          });
+          finalOrder = await fetchLatestOrder();
+        } catch (completionError) {
+          console.error('Error completing mock payment:', completionError);
+          toast.error('Error completing payment: ' + (completionError instanceof Error ? completionError.message : 'Unknown error'));
+          finalOrder = await fetchLatestOrder();
+        }
+      } else {
+        console.log('Real payment initiated or no transaction ID:', payment.airpayTransactionId);
+        toast.success('Payment initiated', {
+          description: `Order #${order.id.slice(-6)} is awaiting payment confirmation`
+        });
+        finalOrder = await fetchLatestOrder();
+      }
+
+      if (finalOrder) setCompletedOrder(finalOrder);
       setIsPaid(true);
-      toast.success('Payment completed & Order status updated to paid', {
-        description: `Order #${order.id.slice(-6)} is now marked as paid`
-      });
     } catch (error) {
       toast.error('Payment failed');
       console.error('Payment error:', error);
@@ -63,29 +104,56 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
   const handleQRPaymentConfirm = async () => {
     try {
       // Create payment record for QR payment which will update order status
-      await createPayment.mutateAsync({
+      const payment = await createPayment.mutateAsync({
         orderId: order.id,
         amount: order.total,
         method: 'qr',
       });
+
+      console.log('QR Payment created:', payment);
+
+      let finalOrder: Order | null = null;
+
+      // If it's a mock payment (for development), auto-complete it
+      if (payment.airpayTransactionId?.startsWith('mock_tx_')) {
+        console.log('Mock QR payment detected, completing...');
+        try {
+          const completedPayment = await completeMockPayment.mutateAsync(payment.id);
+          console.log('QR Payment completed:', completedPayment);
+          toast.success('QR Payment completed & Order status updated to paid (Mock)', {
+            description: `Order #${order.id.slice(-6)} is now marked as paid`
+          });
+          finalOrder = await fetchLatestOrder();
+        } catch (completionError) {
+          console.error('Error completing QR mock payment:', completionError);
+          toast.error('Error completing payment: ' + (completionError instanceof Error ? completionError.message : 'Unknown error'));
+          finalOrder = await fetchLatestOrder();
+        }
+      } else {
+        console.log('Real QR payment initiated:', payment.airpayTransactionId);
+        toast.success('QR Payment initiated', {
+          description: `Order #${order.id.slice(-6)} is awaiting payment confirmation`
+        });
+        finalOrder = await fetchLatestOrder();
+      }
+
+      if (finalOrder) setCompletedOrder(finalOrder);
       setIsPaid(true);
       setShowQR(false);
-      toast.success('QR Payment completed & Order status updated to paid', {
-        description: `Order #${order.id.slice(-6)} is now marked as paid`
-      });
     } catch (error) {
-      toast.error('Payment failed');
-      console.error('Payment error:', error);
+      console.error('QR Payment error:', error);
+      toast.error('Payment failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
   const handleClose = () => {
     if (isPaid) {
-      onComplete(order);
+      onComplete(completedOrder || { ...order, status: 'paid', paid_at: new Date().toISOString() });
     }
     setIsPaid(false);
     setShowQR(false);
     setMethod('cash');
+    setCompletedOrder(null);
     onOpenChange(false);
   };
 

@@ -109,6 +109,7 @@ export interface Payment {
   method: PaymentMethod;
   status: PaymentStatus;
   transactionId?: string;
+  airpayTransactionId?: string;
   createdAt: string;
 }
 

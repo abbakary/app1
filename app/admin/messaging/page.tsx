@@ -155,12 +155,6 @@ Thanks for ordering with us! 🍽️`;
     }
   };
 
-  const statsCounts = {
-    total: customers.filter(c => c.phone).length,
-    alreadySent: sentToCustomers.size,
-    pending: recipientCount,
-  };
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -531,7 +525,7 @@ Thanks for ordering with us! 🍽️`;
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{customer?.name || 'Customer'}</p>
                         <Badge variant="outline" className="text-xs">
-                          {message.message_type.toUpperCase()}
+                          {(message.message_type || 'SMS').toUpperCase()}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">{message.phone_number}</p>
@@ -558,7 +552,17 @@ Thanks for ordering with us! 🍽️`;
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(message.sent_at || message.created_at).toLocaleDateString()} {new Date(message.sent_at || message.created_at).toLocaleTimeString()}
+                        {(() => {
+                          const dateValue = message.sent_at || message.created_at;
+                          if (!dateValue) {
+                            return message.status === 'pending' ? 'Just sent' : 'Recently sent';
+                          }
+                          const date = new Date(dateValue);
+                          if (isNaN(date.getTime())) {
+                            return message.status === 'pending' ? 'Just sent' : 'Recently sent';
+                          }
+                          return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                        })()}
                       </p>
                     </div>
                   </div>

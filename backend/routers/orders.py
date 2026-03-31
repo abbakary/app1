@@ -71,9 +71,10 @@ async def create_order(
     # If x_customer_id is an empty string, treat it as None
     customer_id = x_customer_id if x_customer_id and x_customer_id.strip() else None
     
-    # Generate coupon for ALL customer portal orders (identified by having the header, even if guest)
-    is_portal_order = x_customer_id is not None
-    print(f"Is portal order: {is_portal_order}")
+    # Portal orders are customer-initiated orders without table assignment (pickup/delivery)
+    # Reception orders are staff-initiated or have table assignment (dine-in)
+    is_portal_order = customer_id is not None and not order_data.table_id
+    print(f"Is portal order: {is_portal_order} (customer_id: {customer_id}, table_id: {order_data.table_id})")
     
     try:
         db_order = models.Order(

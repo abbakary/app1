@@ -204,3 +204,74 @@ async def handle_airpay_webhook(
         })
 
     return {"status": "processed"}
+
+@router.post("/complete-mock/{payment_id}")
+async def complete_mock_payment(
+    payment_id: str,
+    db: Session = Depends(get_db),
+    restaurant_id: str = Depends(verify_restaurant)
+):
+    """
+    DEVELOPMENT ONLY: Complete a mock payment
+    This simulates the webhook callback for development/testing purposes
+    """
+    payment = db.query(models.Payment).filter(
+        models.Payment.id == payment_id,
+        models.Payment.restaurant_id == restaurant_id
+    ).first()
+
+    if not payment:
+        print(f"Payment not found: {payment_id} for restaurant: {restaurant_id}")
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    print(f"Complete mock payment: ID={payment_id}, Status={payment.status}, TX_ID={payment.airpay_transaction_id}")
+
+    # Check if already processed
+    if payment.status == "SUCCESS":
+        print(f"Payment already completed: {payment_id}")
+        raise HTTPException(status_code=400, detail="Payment already completed")
+
+    # Check if it's a mock payment
+    if not payment.airpay_transaction_id or not payment.airpay_transaction_id.startswith("mock_tx_"):
+        print(f"Not a mock payment or missing TX ID: {payment.airpay_transaction_id}")
+        # For development, allow completion anyway
+        print(f"Forcing mock payment completion for development")
+
+    # Update payment status to SUCCESS
+    payment.status = "SUCCESS"
+    payment.webhook_processed = payment.airpay_transaction_id
+
+    # Update order status
+    order = db.query(models.Order).filter(models.Order.id == payment.order_id).first()
+    print(f"Updating order {payment.order_id}: Found={order is not None}")
+    
+    if order:
+        print(f"Order found: current_status={order.status}, updating to paid")
+        order.status = "paid"
+        order.paid_at = datetime.utcnow()
+
+        # Free up table if dine-in
+        if order.table_id:
+            table = db.query(models.RestaurantTable).filter(
+                models.RestaurantTable.id == order.table_id
+            ).first()
+            if table:
+                print(f"Freeing table {order.table_id}")
+                table.status = "available"
+                table.current_order_id = None
+    else:
+        print(f"Warning: Order not found for payment {payment_id}")
+
+    db.commit()
+    db.refresh(payment)
+
+    print(f"Payment completed: {payment_id}, Order status updated to: {order.status if order else 'N/A'}")
+
+    # Broadcast update
+    await manager.broadcast_update({
+        "type": "PAYMENT_COMPLETED",
+        "order_id": payment.order_id,
+        "payment_id": payment.id
+    })
+
+    return schemas.Payment.from_orm(payment)

@@ -470,7 +470,7 @@ export default function PortalCustomerMenuPage() {
                             <SelectTrigger id="dine-in-table" className={`h-14 rounded-2xl bg-white dark:bg-gray-900 border-none shadow-sm font-semibold ${!tableId ? 'text-gray-500' : ''}`}>
                               <SelectValue placeholder="Which table are you at?" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-none shadow-xl">
+                            <SelectContent className="z-[999] rounded-2xl border-none shadow-xl">
                               {tables && tables.length > 0 ? (
                                 tables.map(table => (
                                   <SelectItem key={table.id} value={String(table.id)} className="rounded-xl my-1 font-medium">

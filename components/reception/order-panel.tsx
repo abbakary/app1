@@ -176,6 +176,7 @@ export function OrderPanel({ table, onClose, onPayment }: OrderPanelProps) {
       }
       setTimeout(() => onClose(), 500);
     } catch (error) {
+      console.error('Order submission error:', error);
       toast.error('Failed to submit order');
     } finally {
       setIsSubmitting(false);

@@ -743,7 +743,7 @@ export default function CustomerMenuPage() {
                           <SelectTrigger id="table" className={`rounded-xl bg-white/80 dark:bg-gray-900/80 ${!tableId ? 'text-gray-500' : ''}`}>
                             <SelectValue placeholder="Choose your table" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="z-[999]">
                             {tables && tables.length > 0 ? (
                               tables.map(table => (
                                 <SelectItem key={table.id} value={String(table.id)}>

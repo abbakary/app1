@@ -283,7 +283,7 @@ export function CustomerOrdersPanel({ restaurantId, onOrderApproved }: { restaur
                           Assign Driver
                         </Button>
                       </DialogTrigger>
-                      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Assign Driver to Delivery</DialogTitle>
                           <DialogDescription>
@@ -298,7 +298,7 @@ export function CustomerOrdersPanel({ restaurantId, onOrderApproved }: { restaur
                               <SelectTrigger id="driver-select" className={selectedDriver ? '' : 'text-gray-500'}>
                                 <SelectValue placeholder="Select a driver" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="z-[999]">
                                 {drivers && drivers.filter(d => d.is_available).length > 0 ? (
                                   drivers
                                     .filter(d => d.is_available)
