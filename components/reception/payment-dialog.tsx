@@ -15,7 +15,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
-import { CreditCard, Banknote, Smartphone, QrCode, Check, Receipt } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, QrCode, Check, Receipt, ArrowLeft } from 'lucide-react';
+import { ClickPesaForm } from '@/components/payment/ClickPesaForm';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface PaymentDialogProps {
   order: Order;
@@ -28,6 +31,8 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [showQR, setShowQR] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState<'method' | 'payment' | 'success'>('method');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
   const createPayment = useCreatePayment();
   const completeMockPayment = useCompleteMockPayment();
@@ -54,45 +59,34 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
     }
   };
 
-  const handlePayment = async () => {
-    if (method === 'qr') {
+  const handlePaymentMethodSelect = () => {
+    if (method === 'mobile') {
+      // Show ClickPesa form for mobile money
+      setCheckoutStep('payment');
+    } else if (method === 'qr') {
+      // Show QR code
       setShowQR(true);
-      return;
+    } else {
+      // For cash and card, mark as paid immediately
+      handlePayment();
     }
+  };
 
+  const handlePayment = async () => {
     try {
-      // Create payment record which will update order status to paid
+      // Create payment record
       const payment = await createPayment.mutateAsync({
         orderId: order.id,
         amount: order.total,
         method,
       });
 
-      let finalOrder: Order | null = null;
+      console.log('Payment created:', payment);
+      toast.success('Payment recorded', {
+        description: `Order #${order.id.slice(-6)} is marked as paid`
+      });
 
-      // If it's a mock payment (for development), auto-complete it
-      if (payment.airpayTransactionId?.startsWith('mock_tx_')) {
-        console.log('Mock payment detected, completing...');
-        try {
-          const completedPayment = await completeMockPayment.mutateAsync(payment.id);
-          console.log('Payment completed:', completedPayment);
-          toast.success('Payment completed & Order status updated to paid (Mock)', {
-            description: `Order #${order.id.slice(-6)} is now marked as paid`
-          });
-          finalOrder = await fetchLatestOrder();
-        } catch (completionError) {
-          console.error('Error completing mock payment:', completionError);
-          toast.error('Error completing payment: ' + (completionError instanceof Error ? completionError.message : 'Unknown error'));
-          finalOrder = await fetchLatestOrder();
-        }
-      } else {
-        console.log('Real payment initiated or no transaction ID:', payment.airpayTransactionId);
-        toast.success('Payment initiated', {
-          description: `Order #${order.id.slice(-6)} is awaiting payment confirmation`
-        });
-        finalOrder = await fetchLatestOrder();
-      }
-
+      const finalOrder = await fetchLatestOrder();
       if (finalOrder) setCompletedOrder(finalOrder);
       setIsPaid(true);
     } catch (error) {
@@ -101,9 +95,32 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
     }
   };
 
+  const handleMobileMoneySuccess = async () => {
+    // After ClickPesa form successfully initiates payment, create payment record
+    try {
+      const payment = await createPayment.mutateAsync({
+        orderId: order.id,
+        amount: order.total,
+        method: 'mobile',
+      });
+
+      console.log('Mobile money payment created:', payment);
+      toast.success('Mobile money payment initiated', {
+        description: `Order #${order.id.slice(-6)} awaiting payment confirmation`
+      });
+
+      const finalOrder = await fetchLatestOrder();
+      if (finalOrder) setCompletedOrder(finalOrder);
+      setIsPaid(true);
+    } catch (error) {
+      toast.error('Failed to record payment');
+      console.error('Payment error:', error);
+    }
+  };
+
   const handleQRPaymentConfirm = async () => {
     try {
-      // Create payment record for QR payment which will update order status
+      // Create payment record for QR payment
       const payment = await createPayment.mutateAsync({
         orderId: order.id,
         amount: order.total,
@@ -112,31 +129,11 @@ export function PaymentDialog({ order, open, onOpenChange, onComplete }: Payment
 
       console.log('QR Payment created:', payment);
 
-      let finalOrder: Order | null = null;
+      toast.success('QR Payment recorded', {
+        description: `Order #${order.id.slice(-6)} is marked as paid`
+      });
 
-      // If it's a mock payment (for development), auto-complete it
-      if (payment.airpayTransactionId?.startsWith('mock_tx_')) {
-        console.log('Mock QR payment detected, completing...');
-        try {
-          const completedPayment = await completeMockPayment.mutateAsync(payment.id);
-          console.log('QR Payment completed:', completedPayment);
-          toast.success('QR Payment completed & Order status updated to paid (Mock)', {
-            description: `Order #${order.id.slice(-6)} is now marked as paid`
-          });
-          finalOrder = await fetchLatestOrder();
-        } catch (completionError) {
-          console.error('Error completing QR mock payment:', completionError);
-          toast.error('Error completing payment: ' + (completionError instanceof Error ? completionError.message : 'Unknown error'));
-          finalOrder = await fetchLatestOrder();
-        }
-      } else {
-        console.log('Real QR payment initiated:', payment.airpayTransactionId);
-        toast.success('QR Payment initiated', {
-          description: `Order #${order.id.slice(-6)} is awaiting payment confirmation`
-        });
-        finalOrder = await fetchLatestOrder();
-      }
-
+      const finalOrder = await fetchLatestOrder();
       if (finalOrder) setCompletedOrder(finalOrder);
       setIsPaid(true);
       setShowQR(false);
