@@ -28,6 +28,7 @@ import { CategoryPills } from '@/components/portal/CategoryPills';
 import { MenuCard } from '@/components/portal/MenuCard';
 import { DeliveryAddressPicker } from '@/components/portal/DeliveryAddressPicker';
 import { portalFilterMatchesCategory } from '@/lib/menu-categories';
+import { ClickPesaForm } from '@/components/payment/ClickPesaForm';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -225,9 +226,6 @@ export default function PortalCustomerMenuPage() {
   const handleProcessPayment = async () => {
     setIsSubmitting(true);
     try {
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       const auth = localStorage.getItem('customer_auth');
       const authData = auth ? JSON.parse(auth) : null;
 
@@ -235,7 +233,7 @@ export default function PortalCustomerMenuPage() {
       const tax = calculateTax();
       const total = subtotal + tax;
 
-      // Step 1: Create order with paid status (for development/mock payment flow)
+      // Create order with pending status (payment will be confirmed via webhook/polling)
       const orderRes = await fetch(`${BASE_URL}/api/orders`, {
         method: 'POST',
         headers: {
@@ -273,7 +271,7 @@ export default function PortalCustomerMenuPage() {
 
       const orderData = await orderRes.json();
 
-      // Step 2: Create payment record to update order status to paid
+      // Create payment record that links to the order
       try {
         await fetch(`${BASE_URL}/api/payments`, {
           method: 'POST',
@@ -284,21 +282,25 @@ export default function PortalCustomerMenuPage() {
           body: JSON.stringify({
             order_id: orderData.id,
             amount: total,
-            method: 'card', // Mock payment method
-            status: 'completed',
+            method: 'mobile_money',
+            status: 'pending',
+            reference: sessionStorage.getItem('pendingTransactionId'),
           }),
         });
       } catch (paymentErr) {
-        console.error('Payment record creation failed, but order was created:', paymentErr);
-        // Order was created successfully, payment logging failed but we continue
+        console.error('Payment record creation failed:', paymentErr);
       }
 
       setOrderResponse(orderData);
       setCheckoutStep('success');
       setCart([]);
-      toast.success('Payment successful & Order placed!');
+      sessionStorage.removeItem('pendingTransactionId');
+      toast.success('Order placed! Payment confirmation pending', {
+        description: 'Check your phone for the payment prompt'
+      });
     } catch (err) {
       toast.error('Failed to process payment');
+      console.error('Payment error:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -537,56 +539,18 @@ export default function PortalCustomerMenuPage() {
               )}
 
               {checkoutStep === 'payment' && (
-                <div className="p-8 pb-12 space-y-8 text-center bg-white dark:bg-gray-900 flex-1 flex flex-col justify-center overflow-y-auto no-scrollbar">
-                  <div className="w-20 h-20 bg-primary/10 rounded-[32px] flex items-center justify-center mx-auto mb-4">
-                    <CreditCard className="w-10 h-10 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight mb-2">Complete Payment</h3>
-                    <p className="text-gray-500 font-medium">Safe & Secure checkout via Airpay</p>
-                  </div>
-
-                  <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-[32px] border border-gray-100 dark:border-gray-700 space-y-4">
-                    <div className="flex justify-between items-center px-2">
-                      <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Total Amount</span>
-                      <span className="text-2xl font-black text-gray-900 dark:text-white">TSH {cartGrandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                    </div>
-
-                    {/* Mock Payment Badge */}
-                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900/50 py-2.5 rounded-2xl flex items-center justify-center gap-2 mb-2">
-                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
-                      <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Development Mode: Mock Success</span>
-                    </div>
-
-                    <div className="flex flex-col gap-2 pt-2">
-                      <Button
-                        onClick={handleProcessPayment}
-                        disabled={isSubmitting}
-                        className="h-14 bg-black dark:bg-white dark:text-black hover:opacity-90 rounded-2xl font-bold flex items-center justify-center gap-3"
-                      >
-                        {isSubmitting ? (
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <Wallet className="w-5 h-5" />
-                            Pay with Airpay
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setCheckoutStep('cart')}
-                        className="text-gray-400 font-bold text-xs uppercase tracking-widest h-10"
-                      >
-                        Go Back
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2 text-gray-400">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">End-to-End Encrypted</span>
-                  </div>
+                <div className="p-8 pb-12 space-y-8 bg-white dark:bg-gray-900 flex-1 flex flex-col justify-center overflow-y-auto no-scrollbar">
+                  <ClickPesaForm
+                    amount={cartGrandTotal}
+                    customerPhone={customerPhone}
+                    restaurantId={restaurantId}
+                    orderId={completedOrder?.id || ''}
+                    isLoading={isSubmitting}
+                    onSuccess={() => {
+                      handleProcessPayment();
+                    }}
+                    onBack={() => setCheckoutStep('cart')}
+                  />
                 </div>
               )}
 
